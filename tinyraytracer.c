@@ -192,27 +192,27 @@ vec3 refract(const vec3 *I, const vec3 *N, const float eta_t, const float eta_i)
  * @param d
  */
 void ray_sphere_intersect(const vec3 orig, const vec3 dir, const Sphere s, bool *const intersection, float *const d) {
-    const vec3  L   = subtract(s.center, orig);
-    const float tca = dot(L, dir);
+    const vec3  L   = subtract(s.center, orig);  // vector from ray origin to sphere center
+    const float tca = dot(L, dir);               // distance from ray origin to sphere center along ray direction
     const float d2  = dot(L, L) - tca * tca;
 
-    if (d2 > s.radius * s.radius) {
+    if (d2 > s.radius * s.radius) {  // ray misses sphere
         *intersection = false;
         *d            = 0.f;
         return;
     }
 
-    const float thc = sqrt(s.radius * s.radius - d2);
-    const float t0  = tca - thc;
-    const float t1  = tca + thc;
+    const float thc = sqrt(s.radius * s.radius - d2);  // distance from sphere center to ray intersection
+    const float t0  = tca - thc;                       // distance from ray origin to first intersection
+    const float t1  = tca + thc;                       // distance from ray origin to second intersection
 
-    if (t0 > .001f) {
+    if (t0 > .001f) {  // ray hits sphere at first intersection
         *intersection = true;
         *d            = t0;
-    } else if (t1 > .001f) {
+    } else if (t1 > .001f) {  // ray hits sphere at second intersection
         *intersection = true;
         *d            = t1;
-    } else {
+    } else {  // ray misses sphere
         *intersection = false;
         *d            = 0;
     }
@@ -230,40 +230,39 @@ void ray_sphere_intersect(const vec3 orig, const vec3 dir, const Sphere s, bool 
  * @param N
  * @param material
  */
-void scene_intersect(const vec3 orig, const vec3 dir, const Sphere *spheres, const int num_spheres, bool *hit,
-                     vec3 *point, vec3 *N, Material *material) {
-    float    nearest_dist = 1e10;
-    vec3     pt, Normal;
-    Material mat;
-    init_Material(&mat);
+void scene_intersect(const vec3 orig, const vec3 dir, const Sphere *spheres, const int num_spheres, bool *hit, vec3 *point, vec3 *N, Material *material) {
+    float    nearest_dist = 1e10;  // initialize to a large value
+    vec3     pt, Normal;           // point and normal of intersection
+    Material mat;                  // material of intersection
+    init_Material(&mat);           // initialize material to default values
 
-    if (fabs(dir.y) > .001f) {
-        float d = -(orig.y + 4.f) / dir.y;
-        vec3  p = add(orig, scale(dir, d));
-        if (d > 0.001f && d < nearest_dist && fabs(p.x) < 10.f && p.z < -10.f && p.z > -30.f) {
-            nearest_dist      = d;
-            pt                = p;
-            Normal            = (vec3){0.f, 1.f, 0.f};
-            mat.diffuse_color = ((int)(.5f * p.x + 1000.f) + (int)(.5f * p.z)) & 1 ? BOX_COLOR1 : BOX_COLOR2;
+    if (fabs(dir.y) > .001f) {                                                                                 // check if ray is parallel to the floor
+        float d = -(orig.y + 4.f) / dir.y;                                                                     // distance from ray origin to floor
+        vec3  p = add(orig, scale(dir, d));                                                                    // point of intersection
+        if (d > 0.001f && d < nearest_dist && fabs(p.x) < 10.f && p.z < -10.f && p.z > -30.f) {                // check if intersection is within the scene
+            nearest_dist      = d;                                                                             // update nearest distance
+            pt                = p;                                                                             // update point of intersection
+            Normal            = (vec3){0.f, 1.f, 0.f};                                                         // normal at intersection
+            mat.diffuse_color = ((int)(.5f * p.x + 1000.f) + (int)(.5f * p.z)) & 1 ? BOX_COLOR1 : BOX_COLOR2;  // set color
         }
     }
 
-    float d;
+    float d;  // distance from ray origin to intersection
     for (int i = 0; i < num_spheres; i++) {
         const Sphere s = spheres[i];
-        ray_sphere_intersect(orig, dir, s, hit, &d);
-        if (*hit && d <= nearest_dist) {
-            nearest_dist = d;
-            pt           = add(orig, scale(dir, nearest_dist));
-            Normal       = normalized(subtract(pt, s.center));
+        ray_sphere_intersect(orig, dir, s, hit, &d);             // check if ray intersects sphere
+        if (*hit && d <= nearest_dist) {                         // check if intersection is closer than previous
+            nearest_dist = d;                                    // update nearest distance
+            pt           = add(orig, scale(dir, nearest_dist));  // update point of intersection
+            Normal       = normalized(subtract(pt, s.center));   // normal at intersection
             mat          = s.material;
         }
     }
 
-    *hit      = nearest_dist < 1000.f;
-    *point    = pt;
-    *N        = Normal;
-    *material = mat;
+    *hit      = nearest_dist < 1000.f;  // check if ray intersects any object
+    *point    = pt;                     // return point of intersection
+    *N        = Normal;                 // return normal at intersection
+    *material = mat;                    // return material of intersection
 }
 
 /**
@@ -278,28 +277,27 @@ void scene_intersect(const vec3 orig, const vec3 dir, const Sphere *spheres, con
  * @param num_lights
  * @return vec3
  */
-vec3 cast_ray(const vec3 orig, const vec3 dir, const int depth, const Sphere *spheres, const int num_spheres,
-              const vec3 *lights, const int num_lights) {
+vec3 cast_ray(const vec3 orig, const vec3 dir, const int depth, const Sphere *spheres, const int num_spheres, const vec3 *lights, const int num_lights) {
     bool     hit;
     vec3     pt, N;
     Material material;
     init_Material(&material);
 
-    scene_intersect(orig, dir, spheres, num_spheres, &hit, &pt, &N, &material);
+    scene_intersect(orig, dir, spheres, num_spheres, &hit, &pt, &N, &material);  // check if ray intersects any object
 
-    if (depth > DEPTH || !hit) return BACKGROUND_COLOR;
+    if (depth > DEPTH || !hit) return BACKGROUND_COLOR;  // return background color if ray misses scene
 
-    const vec3 reflect_dir   = normalized(reflect(dir, N));
-    const vec3 refract_dir   = normalized(refract(&dir, &N, material.refractive_index, 1.f));
-    const vec3 reflect_color = cast_ray(pt, reflect_dir, depth + 1, spheres, num_spheres, lights, num_lights);
-    const vec3 refract_color = cast_ray(pt, refract_dir, depth + 1, spheres, num_spheres, lights, num_lights);
+    const vec3 reflect_dir   = normalized(reflect(dir, N));                                                     // compute reflection direction
+    const vec3 refract_dir   = normalized(refract(&dir, &N, material.refractive_index, 1.f));                   // compute refraction direction
+    const vec3 reflect_color = cast_ray(pt, reflect_dir, depth + 1, spheres, num_spheres, lights, num_lights);  // compute reflection color
+    const vec3 refract_color = cast_ray(pt, refract_dir, depth + 1, spheres, num_spheres, lights, num_lights);  // compute refraction color
 
     float diffuse_light_intensity  = 0.f;
     float specular_light_intensity = 0.f;
 
     for (int i = 0; i < num_lights; i++) {
         const vec3 light     = lights[i];
-        const vec3 light_dir = normalized(subtract(light, pt));
+        const vec3 light_dir = normalized(subtract(light, pt));  // compute light direction
 
         bool     hit;
         vec3     shadow_pt;
@@ -307,20 +305,20 @@ vec3 cast_ray(const vec3 orig, const vec3 dir, const int depth, const Sphere *sp
         Material trashmat;
         init_Material(&trashmat);
 
-        scene_intersect(pt, light_dir, spheres, num_spheres, &hit, &shadow_pt, &trashnrm, &trashmat);
+        scene_intersect(pt, light_dir, spheres, num_spheres, &hit, &shadow_pt, &trashnrm, &trashmat);  // check if point is in shadow
 
-        if (hit && norm(subtract(shadow_pt, pt)) < norm(subtract(light, pt))) continue;
+        if (hit && norm(subtract(shadow_pt, pt)) < norm(subtract(light, pt))) continue;  // if point is in shadow, skip to next light
 
-        diffuse_light_intensity += MAX(0.f, dot(light_dir, N));
-        specular_light_intensity += pow(MAX(0.f, -dot(reflect(addinv(light_dir), N), dir)), material.specular_exponent);
+        diffuse_light_intensity += MAX(0.f, dot(light_dir, N));                                                           // add diffuse light intensity
+        specular_light_intensity += pow(MAX(0.f, -dot(reflect(addinv(light_dir), N), dir)), material.specular_exponent);  // add specular light intensity
     }
 
-    const vec3 diffuse_color    = scale(material.diffuse_color, diffuse_light_intensity * material.albedo[0]);
-    const vec3 specular_color   = scale((vec3){1.f, 1.f, 1.f}, specular_light_intensity * material.albedo[1]);
-    const vec3 reflection_color = scale(reflect_color, material.albedo[2]);
-    const vec3 refraction_color = scale(refract_color, material.albedo[3]);
+    const vec3 diffuse_color    = scale(material.diffuse_color, diffuse_light_intensity * material.albedo[0]);  // compute diffuse color
+    const vec3 specular_color   = scale((vec3){1.f, 1.f, 1.f}, specular_light_intensity * material.albedo[1]);  // compute specular color
+    const vec3 reflection_color = scale(reflect_color, material.albedo[2]);                                     // compute reflection color
+    const vec3 refraction_color = scale(refract_color, material.albedo[3]);                                     // compute refraction color
 
-    vec3 color;
+    vec3 color;  // color of pixel
     color.x = diffuse_color.x + specular_color.x + reflection_color.x + refraction_color.x;
     color.y = diffuse_color.y + specular_color.y + reflection_color.y + refraction_color.y;
     color.z = diffuse_color.z + specular_color.z + reflection_color.z + refraction_color.z;
@@ -329,45 +327,52 @@ vec3 cast_ray(const vec3 orig, const vec3 dir, const int depth, const Sphere *sp
 }
 
 int main(void) {
-    const int num_spheres = 4;
+    const int num_spheres = 4;  // number of spheres in scene
 
-    Sphere *const spheres = (Sphere *const)malloc(sizeof(Sphere) * num_spheres);
+    Sphere *const spheres = (Sphere *const)malloc(sizeof(Sphere) * num_spheres);  // allocate memory for spheres
 
+    // initialize spheres
     spheres[0] = (Sphere){{-3.f, 0.f, -16.f}, 2.f, ivory};
     spheres[1] = (Sphere){{-1.f, -1.5f, -12.f}, 2.f, glass};
     spheres[2] = (Sphere){{1.5f, -0.5f, -18.f}, 3.f, rubber};
     spheres[3] = (Sphere){{7.f, 5.f, -18.f}, 4.f, mirror};
 
-    const int num_lights = 3;
+    const int num_lights = 3;  // number of lights in scene
 
-    vec3 *const lights = (vec3 *const)malloc(sizeof(vec3) * num_lights);
+    vec3 *const lights = (vec3 *const)malloc(sizeof(vec3) * num_lights);  // allocate memory for lights
 
+    // initialize lights
     lights[0] = (vec3){-20.f, 20.f, 20.f};
     lights[1] = (vec3){30.f, 50.f, -25.f};
     lights[2] = (vec3){30.f, 20.f, 30.f};
 
-    vec3 *framebuffer = malloc(sizeof(vec3) * width * height);
+    vec3 *framebuffer = malloc(sizeof(vec3) * width * height);  // allocate memory for framebuffer
 
-    for (int pix = 0; pix < width * height; pix++) {
+    for (int pix = 0; pix < width * height; pix++) {  // loop through pixels
+        // compute ray direction
         const float dir_x = (pix % width + 0.5f) - width / 2.f;
         const float dir_y = -(pix / width + 0.5f) + height / 2.f;
         const float dir_z = -height / (2.f * tan(fov / 2.f));
-        framebuffer[pix]  = cast_ray((vec3){0.f, 0.f, 0.f}, normalized((vec3){dir_x, dir_y, dir_z}), 0, spheres,
-                                     num_spheres, lights, num_lights);
+
+        const vec3 orig = (vec3){0.f, 0.f, 0.f};                    // ray origin
+        const vec3 dir  = normalized((vec3){dir_x, dir_y, dir_z});  // ray direction
+
+        framebuffer[pix] = cast_ray(orig, dir, 0, spheres, num_spheres, lights, num_lights);  // cast ray
     }
 
-    FILE *f = fopen("out.ppm", "wb");
-    fprintf(f, "P6\n%d %d\n225\n", width, height);
+    FILE *f = fopen("out.ppm", "wb");               // open file for writing
+    fprintf(f, "P6\n%d %d\n225\n", width, height);  // write header
 
-    for (int pix = 0; pix < width * height; pix++) {
-        vec3        color = framebuffer[pix];
-        const float max_  = MAX(1.f, MAX(color.x, MAX(color.y, color.z)));
-        color             = scale(color, 225.f / max_);
-        fprintf(f, "%c%c%c", (unsigned char)color.x, (unsigned char)color.y, (unsigned char)color.z);
+    for (int pix = 0; pix < width * height; pix++) {                                                   // loop through pixels
+        vec3        color = framebuffer[pix];                                                          // get pixel color
+        const float max_  = MAX(1.f, MAX(color.x, MAX(color.y, color.z)));                             // get max color component
+        color             = scale(color, 225.f / max_);                                                // scale color to 0-225 range
+        fprintf(f, "%c%c%c", (unsigned char)color.x, (unsigned char)color.y, (unsigned char)color.z);  // write color to file
     }
 
-    fclose(f);
+    fclose(f);  // close file
 
+    // free memory
     free(spheres);
     free(lights);
     free(framebuffer);
