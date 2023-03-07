@@ -348,6 +348,7 @@ int main(void) {
 
     vec3 *framebuffer = malloc(sizeof(vec3) * width * height);  // allocate memory for framebuffer
 
+#pragma omp parallel for                              // parallelize loop
     for (int pix = 0; pix < width * height; pix++) {  // loop through pixels
         // compute ray direction
         const float dir_x = (pix % width + 0.5f) - width / 2.f;

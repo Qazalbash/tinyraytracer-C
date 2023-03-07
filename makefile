@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g -O
+CFLAGS = -Wall -Wextra -g -O -fopenmp
 LDFLAGS = -lm
 SRC = tinyraytracer
 
