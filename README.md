@@ -24,7 +24,7 @@ Otherwise, you can compile it manually:
 
 ```bash
 git clone https://github.com/Qazalbash/tinyraytracer-C.git
-gcc -Wall -Wextra -g -O -o tinyraytracer tinyraytracer.c -lm
+gcc -Wall -Wextra -g -O -fopenmp -o tinyraytracer tinyraytracer.c -lm
 ./tinyraytracer
 ```
 
