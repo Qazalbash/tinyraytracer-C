@@ -172,7 +172,7 @@ vec3 reflect(const vec3 I, const vec3 N) { return subtract(I, scale(N, 2.f * dot
 vec3 refract(const vec3 *I, const vec3 *N, const float eta_t, const float eta_i) {
     const float cosi = -MAX(-1.f, MIN(1.f, dot(*I, *N)));
 
-    if (cosi < 0) {
+    if (cosi < .0f) {
         const vec3 Ninv = addinv(*N);
         return refract(I, &Ninv, eta_i, eta_t);
     }
@@ -237,9 +237,9 @@ void scene_intersect(const vec3 orig, const vec3 dir, const Sphere *spheres, con
     init_Material(&mat);           // initialize material to default values
 
     if (fabs(dir.y) > .001f) {                                                                                 // check if ray is parallel to the floor
-        float d = -(orig.y + 4.f) / dir.y;                                                                     // distance from ray origin to floor
-        vec3  p = add(orig, scale(dir, d));                                                                    // point of intersection
-        if (d > 0.001f && d < nearest_dist && fabs(p.x) < 10.f && p.z < -10.f && p.z > -30.f) {                // check if intersection is within the scene
+        const float d = -(orig.y + 4.f) / dir.y;                                                               // distance from ray origin to floor
+        vec3        p = add(orig, scale(dir, d));                                                              // point of intersection
+        if (d > .001f && d < nearest_dist && fabs(p.x) < 10.f && p.z < -10.f && p.z > -30.f) {                 // check if intersection is within the scene
             nearest_dist      = d;                                                                             // update nearest distance
             pt                = p;                                                                             // update point of intersection
             Normal            = (vec3){0.f, 1.f, 0.f};                                                         // normal at intersection
@@ -248,7 +248,7 @@ void scene_intersect(const vec3 orig, const vec3 dir, const Sphere *spheres, con
     }
 
     float d;  // distance from ray origin to intersection
-    for (int i = 0; i < num_spheres; i++) {
+    for (int i = 0; i < num_spheres; ++i) {
         const Sphere s = spheres[i];
         ray_sphere_intersect(orig, dir, s, hit, &d);             // check if ray intersects sphere
         if (*hit && d <= nearest_dist) {                         // check if intersection is closer than previous
@@ -295,7 +295,7 @@ vec3 cast_ray(const vec3 orig, const vec3 dir, const int depth, const Sphere *sp
     float diffuse_light_intensity  = 0.f;
     float specular_light_intensity = 0.f;
 
-    for (int i = 0; i < num_lights; i++) {
+    for (int i = 0; i < num_lights; ++i) {
         const vec3 light     = lights[i];
         const vec3 light_dir = normalized(subtract(light, pt));  // compute light direction
 
@@ -349,7 +349,7 @@ int main(void) {
     vec3 *framebuffer = malloc(sizeof(vec3) * width * height);  // allocate memory for framebuffer
 
 #pragma omp parallel for                              // parallelize loop
-    for (int pix = 0; pix < width * height; pix++) {  // loop through pixels
+    for (int pix = 0; pix < width * height; ++pix) {  // loop through pixels
         // compute ray direction
         const float dir_x = (pix % width + 0.5f) - width / 2.f;
         const float dir_y = -(pix / width + 0.5f) + height / 2.f;
@@ -364,7 +364,7 @@ int main(void) {
     FILE *f = fopen("out.ppm", "wb");               // open file for writing
     fprintf(f, "P6\n%d %d\n225\n", width, height);  // write header
 
-    for (int pix = 0; pix < width * height; pix++) {                                                   // loop through pixels
+    for (int pix = 0; pix < width * height; ++pix) {                                                   // loop through pixels
         vec3        color = framebuffer[pix];                                                          // get pixel color
         const float max_  = MAX(1.f, MAX(color.x, MAX(color.y, color.z)));                             // get max color component
         color             = scale(color, 225.f / max_);                                                // scale color to 0-225 range

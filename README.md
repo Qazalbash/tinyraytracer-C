@@ -8,7 +8,7 @@ It is inspired from [tinyraytracer](https://github.com/ssloy/tinyraytracer) by [
 
 -   git
 -   C compiler
--   Make
+-   CMake (> 3.0)
 
 ## How to compile and run
 
@@ -16,6 +16,9 @@ If you have gcc and make installed, then you can simply run the following comman
 
 ```bash
 git clone https://github.com/Qazalbash/tinyraytracer-C.git
+mkdir build
+cd build
+cmake ..
 make
 ./tinyraytracer
 ```
@@ -24,10 +27,18 @@ Otherwise, you can compile it manually:
 
 ```bash
 git clone https://github.com/Qazalbash/tinyraytracer-C.git
-gcc -Wall -Wextra -g -O -fopenmp -o tinyraytracer tinyraytracer.c -lm
+gcc -Wall -Wextra -g -O3 -fopenmp -o tinyraytracer tinyraytracer.c -lm
 ./tinyraytracer
 ```
 
 ## Future work and improvements
 
 There are many things that can be improved in this code. The first and foremost thing is to make it more optimized. I have tried to make it as optimized as possible, but there is still a lot of room for improvement. One aspect is to less use static variables and use dynamic memory allocation instead. I am also planning to make this in OpenCL and CUDA.
+
+## Contributors
+
+<a href="https://github.com/Qazalbash/tinyraytracer-C/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Qazalbash/tinyraytracer-C" />
+</a>
+
+Made with [contrib.rocks](https://contrib.rocks).
